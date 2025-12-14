@@ -127,7 +127,8 @@ void timer_handler(int sig) {
 				pcb[current].pid, pcb[current].tq);
 
 		if (pcb[current].tq == 0) {
-			pcb[current].state = READY;
+			pcb[current].state = END;
+        	kill(pcb[current].pid, SIGKILL); 
 			printf("  PID=%d tq=0 → CONTEXT SWITCH\n",
 				       	pcb[current].pid);
 			context_switch();
