@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <signal.h>
 #include <time.h>
+#include <sys/wait.h>
 
 #define NPROC 10
 #define TIME_QUANTUM 3
