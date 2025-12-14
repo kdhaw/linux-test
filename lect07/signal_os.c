@@ -92,6 +92,20 @@ void io_request(int sig) {
 	context_switch();
 }
 
+void child_exit(int sig) {
+    int status;
+    pid_t pid;
+    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
+        for (int i = 0; i < NPROC; i++) {
+            if (pcb[i].pid == pid) {
+                pcb[i].state = END;
+                pcb[i].tq = 0;
+                printf("  [CHILD %d TERMINATED]\n", pid);
+            }
+        }
+    }
+}
+
 void timer_handler(int sig) {
 	tick++;
 	printf("\n[TICK %d]\n", tick);
@@ -128,6 +142,7 @@ int main() {
 
 	signal(SIGALRM, timer_handler);
 	signal(SIGUSR2, io_request);
+	signal(SIGCHLD, child_exit);
 
 	for (int i = 0; i < NPROC; i++) {
 		pid_t pid = fork();
