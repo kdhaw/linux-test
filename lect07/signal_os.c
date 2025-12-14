@@ -15,10 +15,10 @@ typedef enum {
 } state_t;
 
 typedef struct {
-	    pid_t pid;
-	        state_t state;
-		    int tq;
-		        int sleep;
+	pid_t pid;
+	state_t state;
+	int tq;
+	int sleep;
 } PCB;
 
 PCB pcb[NPROC];
@@ -33,9 +33,24 @@ int next_ready(int start) {
 	return -1;
 }
 
+int all_tq_zero() {
+	for (int i = 0; i < NPROC; i++) {
+		if (pcb[i].state != END && pcb[i].tq > 0)
+			return 0;
+	}
+	return 1;
+}
+
+void reset_all_tq() {
+	printf("  >>> ALL TIME QUANTUM RESET <<<\n");
+	for (int i = 0; i < NPROC; i++) {
+		if (pcb[i].state != END)
+			pcb[i].tq = TIME_QUANTUM;
+	}
+}
+
 void run(int idx) {
 	pcb[idx].state = RUNNING;
-	pcb[idx].tq = TIME_QUANTUM;
 	kill(pcb[idx].pid, SIGUSR1);
 	printf("  RUN PID=%d tq=%d\n", pcb[idx].pid, pcb[idx].tq);
 }
@@ -47,6 +62,7 @@ void context_switch() {
 		run(current);
 	}
 }
+
 void child_handler(int sig) {
 	static int burst = -1;
 
@@ -70,7 +86,8 @@ void child_handler(int sig) {
 void io_request(int sig) {
 	pcb[current].state = SLEEP;
 	pcb[current].sleep = rand() % 5 + 1;
-	printf("  PID=%d I/O → sleep=%d\n",
+	
+	printf("  PID=%d I/O REQUEST  → sleep=%d\n",
 			pcb[current].pid, pcb[current].sleep);
 	context_switch();
 }
@@ -96,10 +113,14 @@ void timer_handler(int sig) {
 
 		if (pcb[current].tq == 0) {
 			pcb[current].state = READY;
-			printf("  PID=%d tq=0 → SWITCH\n", pcb[current].pid);
+			printf("  PID=%d tq=0 → CONTEXT SWITCH\n",
+				       	pcb[current].pid);
 			context_switch();
 		}
 	}
+
+	if (all_tq_zero())
+		reset_all_tq();
 }
 
 int main() {
@@ -116,6 +137,7 @@ int main() {
 		}
 		pcb[i].pid = pid;
 		pcb[i].state = READY;
+		pcb[i].tq = TIME_QUANTUM;
 	}
 	run(0); 
 
